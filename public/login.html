@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connexion — CyberLearn</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="auth-page">
+    <div class="auth-card animate-fade-up">
+      <div class="auth-logo">
+        <a href="/" class="navbar-brand" style="justify-content:center;font-size:1.5rem">
+          🛡️ Cyber<span>Learn</span>
+        </a>
+        <p style="margin-top:0.5rem;font-size:0.875rem;color:var(--text-muted)">Bon retour parmi nous 👋</p>
+      </div>
+
+      <div id="alertBox"></div>
+
+      <form id="loginForm">
+        <div class="form-group">
+          <label class="form-label" for="email">Adresse email</label>
+          <input class="form-input" type="email" id="email" placeholder="vous@exemple.com" required autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="password">Mot de passe</label>
+          <input class="form-input" type="password" id="password" placeholder="••••••••" required autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn btn-primary w-full btn-lg" id="submitBtn">
+          Se connecter
+        </button>
+      </form>
+
+      <p style="text-align:center;margin-top:1.5rem;font-size:0.875rem;color:var(--text-muted)">
+        Pas encore de compte ?
+        <a href="/register.html" style="color:var(--cyan);font-weight:600">Créer un compte</a>
+      </p>
+
+      <div class="auth-divider">ou</div>
+      <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius-md);padding:0.875rem 1rem;font-size:0.8rem;color:var(--text-muted)">
+        <div style="font-weight:600;color:var(--text-secondary);margin-bottom:0.25rem">🔑 Compte admin de démonstration</div>
+        <code>admin@cyberlearn.io</code> / <code>Admin1234!</code>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Redirect if already logged in
+    fetch('/api/auth/me').then(r => { if (r.ok) window.location = '/dashboard.html'; }).catch(()=>{});
+
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn   = document.getElementById('submitBtn');
+      const alert = document.getElementById('alertBox');
+      alert.innerHTML = '';
+      btn.disabled = true;
+      btn.textContent = 'Connexion...';
+
+      try {
+        const r = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email:    document.getElementById('email').value.trim(),
+            password: document.getElementById('password').value,
+          }),
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Erreur de connexion');
+        window.location = '/dashboard.html';
+      } catch (err) {
+        alert.innerHTML = `<div class="alert alert-error mb-3">⚠️ ${err.message}</div>`;
+        btn.disabled = false;
+        btn.textContent = 'Se connecter';
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — CyberLearn</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    body { background: var(--bg-primary); }
+    .dash-hero {
+      background: linear-gradient(135deg, rgba(0,212,255,0.07), rgba(124,58,237,0.1));
+      border-bottom: 1px solid var(--border);
+      padding: 2rem;
+    }
+    .xp-info { display:flex; align-items:center; gap:1rem; flex-wrap:wrap; }
+    .level-badge {
+      background: linear-gradient(135deg, var(--cyan), var(--purple));
+      color: #fff; padding: 0.375rem 1rem; border-radius: 999px;
+      font-size: 0.8rem; font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <a href="/" class="navbar-brand">🛡️ Cyber<span>Learn</span></a>
+    <div class="navbar-links">
+      <a href="/dashboard.html" class="active">Dashboard</a>
+      <a href="/courses.html">Cours</a>
+      <a href="/profile.html" id="navProfile">Profil</a>
+      <a href="/admin.html" id="navAdmin" class="hidden">Admin</a>
+    </div>
+    <div class="navbar-actions">
+      <a href="/profile.html" class="navbar-user">
+        <div class="avatar" id="navAvatar">?</div>
+        <span id="navUsername" style="font-size:0.875rem;font-weight:600"></span>
+      </a>
+      <button class="btn btn-ghost btn-sm" onclick="logout()">Déconnexion</button>
+    </div>
+  </nav>
+
+  <!-- Dashboard hero -->
+  <div class="dash-hero">
+    <div class="container">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem">
+        <div>
+          <h1 style="font-size:1.75rem;margin-bottom:0.25rem">Bonjour, <span class="glow-cyan" id="heroName">...</span> 👋</h1>
+          <p style="color:var(--text-muted)">Continuez votre apprentissage</p>
+        </div>
+        <div class="xp-info">
+          <div class="level-badge" id="levelBadge">Niveau 1</div>
+          <div style="text-align:right">
+            <div style="font-size:0.8rem;color:var(--text-muted)">XP Total</div>
+            <div class="font-mono fw-700 text-cyan" id="xpTotal" style="font-size:1.25rem">0</div>
+          </div>
+        </div>
+      </div>
+      <div class="xp-bar-wrap">
+        <div class="xp-bar-fill" id="xpBar" style="width:0%"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:0.75rem;color:var(--text-muted);margin-top:0.375rem">
+        <span id="xpLabel">0 / 500 XP</span>
+        <span id="nextLevel">Niveau 2</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main content -->
+  <div class="container" style="padding-top:2rem;padding-bottom:3rem">
+    <!-- Stats row -->
+    <div class="grid-4" style="margin-bottom:2rem">
+      <div class="stat-card">
+        <div class="stat-label">Cours commencés</div>
+        <div class="stat-value text-cyan" id="statStarted">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Cours terminés</div>
+        <div class="stat-value" style="color:var(--green)" id="statCompleted">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Quiz réussis</div>
+        <div class="stat-value" style="color:var(--purple-light)" id="statQuizzes">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Favoris</div>
+        <div class="stat-value" style="color:var(--orange)" id="statBookmarks">—</div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <!-- Recent activity -->
+      <div>
+        <div class="section-header">
+          <h3>Activité récente</h3>
+        </div>
+        <div class="card" id="recentActivity">
+          <div class="loading-state"><div class="spinner"></div></div>
+        </div>
+      </div>
+
+      <!-- Leaderboard -->
+      <div>
+        <div class="section-header" style="display:flex;align-items:center;justify-content:space-between">
+          <h3>🏆 Classement</h3>
+        </div>
+        <div class="card" id="leaderboardBox">
+          <div class="loading-state"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Courses section -->
+    <div style="margin-top:2.5rem">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem">
+        <h3>Continuer l'apprentissage</h3>
+        <a href="/courses.html" class="btn btn-secondary btn-sm">Tous les cours →</a>
+      </div>
+      <div class="grid-3" id="dashCourses">
+        <div class="loading-state" style="grid-column:1/-1"><div class="spinner"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentUser = null;
+
+    async function init() {
+      const r = await fetch('/api/auth/me');
+      if (!r.ok) { window.location = '/login.html'; return; }
+      const { user } = await r.json();
+      currentUser = user;
+
+      document.getElementById('navUsername').textContent = user.username;
+      document.getElementById('navAvatar').textContent   = user.username[0].toUpperCase();
+      document.getElementById('heroName').textContent    = user.username;
+      if (user.role === 'admin') document.getElementById('navAdmin').classList.remove('hidden');
+
+      // XP & level
+      const xp    = user.xp;
+      const level = Math.floor(xp / 500) + 1;
+      const mod   = xp % 500;
+      document.getElementById('xpTotal').textContent  = xp;
+      document.getElementById('levelBadge').textContent = `Niveau ${level}`;
+      document.getElementById('xpBar').style.width    = (mod / 500 * 100) + '%';
+      document.getElementById('xpLabel').textContent  = `${mod} / 500 XP`;
+      document.getElementById('nextLevel').textContent = `Niveau ${level + 1}`;
+
+      loadProfile();
+      loadLeaderboard();
+      loadCourses();
+    }
+
+    async function loadProfile() {
+      const r = await fetch('/api/users/profile');
+      if (!r.ok) return;
+      const { stats, recentActivity } = await r.json();
+      document.getElementById('statStarted').textContent   = stats.courses_started;
+      document.getElementById('statCompleted').textContent = stats.courses_completed;
+      document.getElementById('statQuizzes').textContent   = stats.quizzes_passed;
+      document.getElementById('statBookmarks').textContent = stats.bookmarks;
+
+      const actBox = document.getElementById('recentActivity');
+      if (!recentActivity.length) {
+        actBox.innerHTML = '<div class="empty-state"><div class="empty-icon">📖</div><p>Aucune activité pour l\'instant</p></div>';
+        return;
+      }
+      actBox.innerHTML = recentActivity.map(a => `
+        <div style="display:flex;align-items:center;gap:1rem;padding:0.75rem 0;border-bottom:1px solid var(--border)">
+          <span style="font-size:1.5rem">${a.icon}</span>
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:0.875rem">${a.title}</div>
+            <div style="font-size:0.75rem;color:var(--text-muted)">${new Date(a.last_at).toLocaleDateString('fr-FR')}</div>
+          </div>
+          <a href="/course.html?id=${a.slug}" class="btn btn-ghost btn-sm">Reprendre →</a>
+        </div>
+      `).join('').replace(/border-bottom:[^;]+;(?=[^"]*<\/div>\s*$)/,'');
+    }
+
+    async function loadLeaderboard() {
+      const r = await fetch('/api/users/leaderboard');
+      if (!r.ok) return;
+      const { leaderboard } = await r.json();
+      const lbBox = document.getElementById('leaderboardBox');
+      const rankEmojis = ['🥇','🥈','🥉'];
+      lbBox.innerHTML = leaderboard.slice(0, 8).map((u, i) => `
+        <div class="leaderboard-row ${currentUser?.id === u.id ? 'card-glow' : ''}">
+          <div class="rank" style="${i<3?'font-size:1.25rem':'color:var(--text-muted)'}">
+            ${i < 3 ? rankEmojis[i] : (i+1)}
+          </div>
+          <div class="avatar" style="width:28px;height:28px;font-size:0.7rem">${u.username[0].toUpperCase()}</div>
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:0.875rem">${u.username}${currentUser?.id===u.id?' <span style="color:var(--cyan)">(vous)</span>':''}</div>
+            <div style="font-size:0.75rem;color:var(--text-muted)">${u.quizzes_passed} quiz réussis</div>
+          </div>
+          <div class="font-mono text-cyan" style="font-weight:700;font-size:0.9rem">${u.xp} XP</div>
+        </div>
+      `).join('');
+    }
+
+    async function loadCourses() {
+      const r = await fetch('/api/courses');
+      if (!r.ok) return;
+      const { courses } = await r.json();
+      const el = document.getElementById('dashCourses');
+      const inProgress = courses.filter(c => c.completed_modules > 0 && c.completed_modules < c.total_modules);
+      const display = inProgress.length ? inProgress : courses.slice(0, 3);
+
+      el.innerHTML = display.slice(0,3).map(c => {
+        const pct = c.total_modules ? Math.round(c.completed_modules / c.total_modules * 100) : 0;
+        return `
+        <div class="course-card" onclick="window.location='/course.html?id=${c.id}'">
+          <div class="course-card-banner" style="background:linear-gradient(135deg,${c.banner_color},${c.banner_color}99)">
+            <span class="course-icon">${c.icon}</span>
+            <span class="badge badge-${c.difficulty==='beginner'?'beginner':c.difficulty==='advanced'?'advanced':'intermediate'}">${c.difficulty}</span>
+          </div>
+          <div class="course-card-body">
+            <div class="course-title">${c.title}</div>
+            <div class="course-desc">${c.description}</div>
+            <div class="course-meta">
+              <span class="badge badge-cyan">⏱ ${c.duration_min} min</span>
+              <span class="badge badge-purple">⚡ ${c.xp_reward} XP</span>
+            </div>
+            <div class="progress-bar-wrap">
+              <div class="progress-bar-fill" style="width:${pct}%"></div>
+            </div>
+            <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.375rem">${pct}% complété</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    async function logout() {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location = '/login.html';
+    }
+
+    init();
+  </script>
+</body>
+</html>

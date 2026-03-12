@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quiz — CyberLearn</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .quiz-wrapper {
+      min-height: calc(100vh - 64px);
+      background:
+        radial-gradient(ellipse at 30% 50%, rgba(124,58,237,0.1) 0%, transparent 50%),
+        radial-gradient(ellipse at 70% 20%, rgba(0,212,255,0.08) 0%, transparent 40%),
+        var(--bg-primary);
+      padding: 2rem;
+      display: flex; align-items: flex-start; justify-content: center;
+    }
+    .quiz-container { width: 100%; max-width: 720px; }
+    .result-card { text-align: center; }
+    .result-review { text-align: left; margin-top: 2rem; }
+    .review-item {
+      padding: 1rem; border-radius: var(--radius-md);
+      margin-bottom: 0.75rem;
+      border: 1px solid var(--border);
+    }
+    .review-item.ok  { border-color: rgba(16,185,129,0.4); background: var(--green-dim); }
+    .review-item.bad { border-color: rgba(239,68,68,0.4);  background: var(--red-dim); }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/" class="navbar-brand">🛡️ Cyber<span>Learn</span></a>
+    <div class="navbar-links">
+      <a href="/dashboard.html">Dashboard</a>
+      <a href="/courses.html" class="active">Cours</a>
+    </div>
+    <div class="navbar-actions">
+      <a href="/profile.html" class="navbar-user">
+        <div class="avatar" id="navAvatar">?</div>
+        <span id="navUsername" style="font-size:.875rem;font-weight:600"></span>
+      </a>
+    </div>
+  </nav>
+
+  <div class="quiz-wrapper">
+    <div class="quiz-container animate-fade-up" id="quizContainer">
+      <div class="loading-state"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <script>
+    let questions = [], currentQ = 0, answers = {}, courseData = null, courseId = null;
+
+    async function init() {
+      const r = await fetch('/api/auth/me');
+      if (!r.ok) { window.location = '/login.html'; return; }
+      const { user } = await r.json();
+      document.getElementById('navUsername').textContent = user.username;
+      document.getElementById('navAvatar').textContent   = user.username[0].toUpperCase();
+
+      const params = new URLSearchParams(window.location.search);
+      courseId = params.get('id');
+      if (!courseId) { window.location = '/courses.html'; return; }
+
+      const qr = await fetch(`/api/quizzes/${courseId}`);
+      if (!qr.ok) { window.location = '/courses.html'; return; }
+      const data = await qr.json();
+      questions  = data.questions;
+      courseData = data.course;
+
+      if (!questions.length) {
+        document.getElementById('quizContainer').innerHTML = '<div class="empty-state"><div class="empty-icon">🔍</div><h3>Pas de quiz pour ce cours</h3></div>';
+        return;
+      }
+
+      renderQuestion();
+    }
+
+    function renderQuestion() {
+      const q   = questions[currentQ];
+      const box = document.getElementById('quizContainer');
+      const opts = [
+        { key:'a', label: q.option_a },
+        { key:'b', label: q.option_b },
+        { key:'c', label: q.option_c },
+        { key:'d', label: q.option_d },
+      ];
+
+      box.innerHTML = `
+        <div style="margin-bottom:1.5rem">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem">
+            <div style="font-size:0.8rem;color:var(--text-muted)">${courseData.title}</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.06);border-radius:999px;height:6px;overflow:hidden;margin-bottom:1rem">
+            <div style="height:100%;border-radius:999px;background:linear-gradient(90deg,var(--cyan),var(--purple));width:${(currentQ+1)/questions.length*100}%;transition:width .4s ease"></div>
+          </div>
+          <div class="quiz-progress-dots" style="justify-content:center">
+            ${questions.map((_,i) => `<div class="q-dot ${i===currentQ?'current':answers[questions[i].id]!==undefined?'answered':''}" id="qdot-${i}"></div>`).join('')}
+          </div>
+        </div>
+
+        <div class="quiz-question">
+          <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.5rem">Question ${currentQ+1} / ${questions.length}</div>
+          <p style="font-size:1.05rem;font-weight:600;color:var(--text-primary);margin:0">${q.question}</p>
+          <div class="quiz-options">
+            ${opts.map(o => `
+              <div class="quiz-option ${answers[q.id]===o.key?'selected':''}" id="opt-${o.key}" onclick="selectAnswer('${o.key}')">
+                <div class="option-key">${o.key.toUpperCase()}</div>
+                <span>${o.label}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <div class="quiz-nav" style="margin-top:1.5rem">
+          <button class="btn btn-secondary" onclick="prev()" ${currentQ===0?'disabled':''}>← Précédent</button>
+          <span style="font-size:0.875rem;color:var(--text-muted)">${Object.keys(answers).length}/${questions.length} répondues</span>
+          ${currentQ < questions.length-1
+            ? `<button class="btn btn-primary" onclick="next()" ${answers[q.id]===undefined?'disabled':''}>Suivant →</button>`
+            : `<button class="btn btn-primary" onclick="submitQuiz()" ${Object.keys(answers).length < questions.length ? 'disabled':''}>Soumettre 🎯</button>`
+          }
+        </div>
+      `;
+    }
+
+    function selectAnswer(key) {
+      const q = questions[currentQ];
+      answers[q.id] = key;
+      renderQuestion();
+      // Auto-advance after 300ms
+      if (currentQ < questions.length - 1) {
+        setTimeout(next, 400);
+      }
+    }
+
+    function next() { if (currentQ < questions.length-1) { currentQ++; renderQuestion(); } }
+    function prev() { if (currentQ > 0) { currentQ--; renderQuestion(); } }
+
+    async function submitQuiz() {
+      const box = document.getElementById('quizContainer');
+      box.innerHTML = '<div class="loading-state"><div class="spinner"></div><p>Correction en cours...</p></div>';
+
+      const r = await fetch(`/api/quizzes/${courseId}/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ answers }),
+      });
+      const data = await r.json();
+      renderResults(data);
+    }
+
+    function renderResults({ score, total, passed, xpEarned, details }) {
+      const pct     = Math.round(score / total * 100);
+      const r       = 70;
+      const circ    = 2 * Math.PI * r;
+      const dash    = circ * (pct / 100);
+      const color   = passed ? 'var(--green)' : pct >= 40 ? 'var(--orange)' : 'var(--red)';
+
+      document.getElementById('quizContainer').innerHTML = `
+        <div class="result-card animate-fade-in">
+          <h2 style="margin-bottom:1rem">${passed ? '🎉 Quiz réussi !' : '📚 Continuez à apprendre'}</h2>
+
+          <div class="score-ring">
+            <svg width="160" height="160" viewBox="0 0 160 160">
+              <circle cx="80" cy="80" r="${r}" fill="none" stroke="var(--bg-tertiary)" stroke-width="10"/>
+              <circle cx="80" cy="80" r="${r}" fill="none" stroke="${color}" stroke-width="10"
+                stroke-dasharray="${dash} ${circ - dash}" stroke-linecap="round"
+                style="transition:stroke-dasharray 1s ease"/>
+            </svg>
+            <div class="value">
+              <span style="color:${color}">${pct}%</span>
+              <small>${score}/${total}</small>
+            </div>
+          </div>
+
+          <div class="grid-3" style="margin:1.5rem 0">
+            <div class="stat-card" style="text-align:center">
+              <div class="stat-label">Score</div>
+              <div class="stat-value" style="color:${color}">${score}/${total}</div>
+            </div>
+            <div class="stat-card" style="text-align:center">
+              <div class="stat-label">XP gagné</div>
+              <div class="stat-value text-cyan">+${xpEarned}</div>
+            </div>
+            <div class="stat-card" style="text-align:center">
+              <div class="stat-label">Statut</div>
+              <div class="stat-value">${passed ? '✅' : '❌'}</div>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;margin-bottom:2rem">
+            <a href="/course.html?id=${courseId}" class="btn btn-secondary">← Retour au cours</a>
+            <button class="btn btn-primary" onclick="retakeQuiz()">🔄 Recommencer</button>
+            <a href="/courses.html" class="btn btn-ghost">Tous les cours</a>
+          </div>
+
+          <div class="result-review">
+            <h3 style="margin-bottom:1rem">📋 Correction détaillée</h3>
+            ${details.map((d, i) => {
+              const opts = { a: d.options.a, b: d.options.b, c: d.options.c, d: d.options.d };
+              return `
+              <div class="review-item ${d.isCorrect ? 'ok' : 'bad'}">
+                <div style="display:flex;align-items:flex-start;gap:0.75rem;margin-bottom:0.5rem">
+                  <span style="font-size:1.25rem">${d.isCorrect ? '✅' : '❌'}</span>
+                  <div style="font-weight:600;font-size:0.9rem">${i+1}. ${d.question}</div>
+                </div>
+                <div style="font-size:0.825rem;color:var(--text-muted);margin-left:2rem">
+                  Ta réponse : <strong style="color:${d.isCorrect?'var(--green)':'var(--red)'}">${d.userAnswer ? opts[d.userAnswer] : '(pas de réponse)'}</strong>
+                  ${!d.isCorrect ? `<br>Bonne réponse : <strong style="color:var(--green)">${opts[d.correct]}</strong>` : ''}
+                  ${d.explanation ? `<br><em style="color:var(--text-secondary);margin-top:0.25rem;display:block">💡 ${d.explanation}</em>` : ''}
+                </div>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function retakeQuiz() {
+      answers = {}; currentQ = 0;
+      renderQuestion();
+    }
+
+    init();
+  </script>
+</body>
+</html>

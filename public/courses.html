@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cours — CyberLearn</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .search-bar {
+      display:flex; gap:0.75rem; align-items:center;
+      background:var(--bg-card); border:1px solid var(--border);
+      border-radius:var(--radius-lg); padding:0.75rem 1rem;
+      margin-bottom:1.5rem;
+    }
+    .search-bar input {
+      flex:1; background:none; border:none; outline:none;
+      color:var(--text-primary); font-size:0.9rem;
+    }
+    .search-bar input::placeholder { color:var(--text-muted); }
+    .filter-chips { display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1.5rem; }
+    .chip {
+      padding:0.375rem 0.875rem; border-radius:999px;
+      font-size:0.8rem; font-weight:600;
+      background:var(--bg-card); border:1px solid var(--border);
+      color:var(--text-secondary); cursor:pointer; transition:var(--transition);
+    }
+    .chip:hover, .chip.active { background:var(--cyan-dim); border-color:var(--border-glow); color:var(--cyan); }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/" class="navbar-brand">🛡️ Cyber<span>Learn</span></a>
+    <div class="navbar-links">
+      <a href="/dashboard.html">Dashboard</a>
+      <a href="/courses.html" class="active">Cours</a>
+      <a href="/profile.html">Profil</a>
+      <a href="/admin.html" id="navAdmin" class="hidden">Admin</a>
+    </div>
+    <div class="navbar-actions">
+      <a href="/profile.html" class="navbar-user">
+        <div class="avatar" id="navAvatar">?</div>
+        <span id="navUsername" style="font-size:0.875rem;font-weight:600"></span>
+      </a>
+      <button class="btn btn-ghost btn-sm" onclick="logout()">Déconnexion</button>
+    </div>
+  </nav>
+
+  <div class="container" style="padding-top:2rem;padding-bottom:3rem">
+    <div style="margin-bottom:2rem">
+      <div class="section-tag">Catalogue</div>
+      <h1 style="font-size:2rem">Tous les cours</h1>
+      <p>Choisissez votre parcours et commencez à apprendre.</p>
+    </div>
+
+    <div class="search-bar">
+      <span style="color:var(--text-muted)">🔍</span>
+      <input type="text" id="searchInput" placeholder="Rechercher un cours..." oninput="filterCourses()">
+    </div>
+
+    <div class="filter-chips" id="filterChips">
+      <div class="chip active" data-filter="all" onclick="setFilter('all',this)">Tous</div>
+      <div class="chip" data-filter="beginner" onclick="setFilter('beginner',this)">🟢 Débutant</div>
+      <div class="chip" data-filter="intermediate" onclick="setFilter('intermediate',this)">🟡 Intermédiaire</div>
+      <div class="chip" data-filter="advanced" onclick="setFilter('advanced',this)">🔴 Avancé</div>
+    </div>
+
+    <div id="courseGrid" class="grid-3">
+      <div class="loading-state" style="grid-column:1/-1"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <script>
+    let allCourses = [];
+    let activeFilter = 'all';
+
+    async function init() {
+      const r = await fetch('/api/auth/me');
+      if (!r.ok) { window.location = '/login.html'; return; }
+      const { user } = await r.json();
+      document.getElementById('navUsername').textContent = user.username;
+      document.getElementById('navAvatar').textContent   = user.username[0].toUpperCase();
+      if (user.role === 'admin') document.getElementById('navAdmin').classList.remove('hidden');
+
+      const cr = await fetch('/api/courses');
+      if (!cr.ok) return;
+      const { courses } = await cr.json();
+      allCourses = courses;
+      renderCourses();
+    }
+
+    function setFilter(f, el) {
+      document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+      el.classList.add('active');
+      activeFilter = f;
+      renderCourses();
+    }
+
+    function filterCourses() { renderCourses(); }
+
+    function renderCourses() {
+      const query = document.getElementById('searchInput').value.toLowerCase();
+      const filtered = allCourses.filter(c => {
+        const matchDiff = activeFilter === 'all' || c.difficulty === activeFilter;
+        const matchQ    = !query || c.title.toLowerCase().includes(query) || c.description.toLowerCase().includes(query);
+        return matchDiff && matchQ;
+      });
+
+      const grid = document.getElementById('courseGrid');
+      if (!filtered.length) {
+        grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🔍</div><h3>Aucun cours trouvé</h3><p>Essayez un autre filtre.</p></div>';
+        return;
+      }
+      grid.innerHTML = filtered.map(c => {
+        const pct = c.total_modules ? Math.round(c.completed_modules / c.total_modules * 100) : 0;
+        const diffLabel = { beginner:'Débutant', intermediate:'Intermédiaire', advanced:'Avancé' }[c.difficulty];
+        return `
+        <div class="course-card" onclick="window.location='/course.html?id=${c.id}'">
+          <div class="course-card-banner" style="background:linear-gradient(135deg,${c.banner_color},${c.banner_color}88)">
+            <span class="course-icon">${c.icon}</span>
+            <span class="badge badge-${c.difficulty}">${diffLabel}</span>
+          </div>
+          <div class="course-card-body">
+            <div style="font-size:0.75rem;color:${c.category_color};font-weight:600;margin-bottom:0.375rem">${c.category_icon} ${c.category_name}</div>
+            <div class="course-title">${c.title}</div>
+            <div class="course-desc">${c.description}</div>
+            <div class="course-meta">
+              <span class="badge badge-cyan">⏱ ${c.duration_min} min</span>
+              <span class="badge badge-purple">⚡ ${c.xp_reward} XP</span>
+              ${c.bookmarked ? '<span class="badge badge-cyan">🔖 Favori</span>' : ''}
+            </div>
+            <div class="progress-bar-wrap">
+              <div class="progress-bar-fill" style="width:${pct}%"></div>
+            </div>
+            <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.375rem;display:flex;justify-content:space-between">
+              <span>${pct > 0 ? pct + '% complété' : 'Non commencé'}</span>
+              <span>${c.completed_modules}/${c.total_modules} modules</span>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    async function logout() {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location = '/login.html';
+    }
+
+    init();
+  </script>
+</body>
+</html>

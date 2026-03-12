@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profil — CyberLearn</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .profile-header {
+      background: linear-gradient(135deg,rgba(0,212,255,.07),rgba(124,58,237,.1));
+      border-bottom: 1px solid var(--border);
+      padding: 2.5rem 2rem;
+    }
+    .profile-avatar-big {
+      width:80px;height:80px;border-radius:50%;
+      background:linear-gradient(135deg,var(--cyan),var(--purple));
+      display:flex;align-items:center;justify-content:center;
+      font-size:2rem;font-weight:700;flex-shrink:0;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/" class="navbar-brand">🛡️ Cyber<span>Learn</span></a>
+    <div class="navbar-links">
+      <a href="/dashboard.html">Dashboard</a>
+      <a href="/courses.html">Cours</a>
+      <a href="/profile.html" class="active">Profil</a>
+      <a href="/admin.html" id="navAdmin" class="hidden">Admin</a>
+    </div>
+    <div class="navbar-actions">
+      <button class="btn btn-ghost btn-sm" onclick="logout()">Déconnexion</button>
+    </div>
+  </nav>
+
+  <!-- Profile hero -->
+  <div class="profile-header">
+    <div class="container">
+      <div style="display:flex;gap:1.5rem;align-items:center;flex-wrap:wrap">
+        <div class="profile-avatar-big" id="bigAvatar">?</div>
+        <div>
+          <h1 style="font-size:1.75rem;margin-bottom:0.25rem" id="profileName">...</h1>
+          <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.5rem">
+            <span class="badge badge-cyan" id="profileRole"></span>
+            <span class="badge badge-purple font-mono" id="profileXP"></span>
+          </div>
+          <p style="font-size:0.875rem;color:var(--text-muted)" id="profileJoined"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container" style="padding-top:2rem;padding-bottom:3rem">
+    <div class="grid-4" style="margin-bottom:2rem">
+      <div class="stat-card"><div class="stat-label">Cours commencés</div><div class="stat-value text-cyan" id="sStarted">—</div></div>
+      <div class="stat-card"><div class="stat-label">Cours terminés</div><div class="stat-value" style="color:var(--green)" id="sCompleted">—</div></div>
+      <div class="stat-card"><div class="stat-label">Quiz réussis</div><div class="stat-value" style="color:var(--purple-light)" id="sQuizzes">—</div></div>
+      <div class="stat-card"><div class="stat-label">Favoris</div><div class="stat-value" style="color:var(--orange)" id="sBookmarks">—</div></div>
+    </div>
+
+    <div class="grid-2">
+      <!-- Edit form -->
+      <div class="card">
+        <h3 style="margin-bottom:1.5rem">⚙️ Modifier le profil</h3>
+        <div id="profileAlert"></div>
+        <form id="profileForm">
+          <div class="form-group">
+            <label class="form-label">Nom d'utilisateur</label>
+            <input class="form-input" type="text" id="editUsername" placeholder="username">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Mot de passe actuel</label>
+            <input class="form-input" type="password" id="currentPwd" placeholder="Requis pour changer le mot de passe">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Nouveau mot de passe</label>
+            <input class="form-input" type="password" id="newPwd" placeholder="Laisser vide si inchangé">
+          </div>
+          <button type="submit" class="btn btn-primary w-full">Sauvegarder</button>
+        </form>
+      </div>
+
+      <!-- Recent activity -->
+      <div class="card">
+        <h3 style="margin-bottom:1.5rem">🕐 Activité récente</h3>
+        <div id="recentAct"><div class="loading-state"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    async function init() {
+      const r = await fetch('/api/auth/me');
+      if (!r.ok) { window.location = '/login.html'; return; }
+      const { user } = await r.json();
+      if (user.role === 'admin') document.getElementById('navAdmin').classList.remove('hidden');
+
+      const pr = await fetch('/api/users/profile');
+      if (!pr.ok) return;
+      const { user: u, stats, recentActivity } = await pr.json();
+
+      document.getElementById('bigAvatar').textContent   = u.username[0].toUpperCase();
+      document.getElementById('profileName').textContent = u.username;
+      document.getElementById('profileRole').textContent = u.role === 'admin' ? '👑 Admin' : '🎓 Apprenant';
+      document.getElementById('profileXP').textContent   = '⚡ ' + u.xp + ' XP';
+      document.getElementById('profileJoined').textContent = 'Membre depuis ' + new Date(u.created_at).toLocaleDateString('fr-FR', { year:'numeric', month:'long' });
+      document.getElementById('editUsername').value = u.username;
+
+      document.getElementById('sStarted').textContent   = stats.courses_started;
+      document.getElementById('sCompleted').textContent = stats.courses_completed;
+      document.getElementById('sQuizzes').textContent   = stats.quizzes_passed;
+      document.getElementById('sBookmarks').textContent = stats.bookmarks;
+
+      const actEl = document.getElementById('recentAct');
+      if (!recentActivity.length) {
+        actEl.innerHTML = '<div class="empty-state"><div class="empty-icon">📖</div><p>Aucune activité</p></div>';
+      } else {
+        actEl.innerHTML = recentActivity.map(a => `
+          <div style="display:flex;align-items:center;gap:0.875rem;padding:.75rem 0;border-bottom:1px solid var(--border)">
+            <span style="font-size:1.5rem">${a.icon}</span>
+            <div style="flex:1">
+              <div style="font-weight:600;font-size:.875rem">${a.title}</div>
+              <div style="font-size:.75rem;color:var(--text-muted)">${new Date(a.last_at).toLocaleDateString('fr-FR')}</div>
+            </div>
+            <a href="/course.html?id=${a.slug}" class="btn btn-ghost btn-sm">→</a>
+          </div>
+        `).join('');
+      }
+    }
+
+    document.getElementById('profileForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const alertEl = document.getElementById('profileAlert');
+      alertEl.innerHTML = '';
+      const body = {};
+      const un = document.getElementById('editUsername').value.trim();
+      const cp = document.getElementById('currentPwd').value;
+      const np = document.getElementById('newPwd').value;
+      if (un) body.username = un;
+      if (np) { body.currentPassword = cp; body.newPassword = np; }
+
+      const r = await fetch('/api/users/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await r.json();
+      if (!r.ok) {
+        alertEl.innerHTML = `<div class="alert alert-error mb-2">⚠️ ${data.error}</div>`;
+      } else {
+        alertEl.innerHTML = `<div class="alert alert-success mb-2">✅ Profil mis à jour !</div>`;
+        document.getElementById('profileName').textContent = data.user.username;
+        document.getElementById('bigAvatar').textContent   = data.user.username[0].toUpperCase();
+        document.getElementById('currentPwd').value = '';
+        document.getElementById('newPwd').value = '';
+      }
+    });
+
+    async function logout() {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location = '/login.html';
+    }
+
+    init();
+  </script>
+</body>
+</html>

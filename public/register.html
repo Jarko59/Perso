@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Créer un compte — CyberLearn</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="auth-page">
+    <div class="auth-card animate-fade-up">
+      <div class="auth-logo">
+        <a href="/" class="navbar-brand" style="justify-content:center;font-size:1.5rem">
+          🛡️ Cyber<span>Learn</span>
+        </a>
+        <p style="margin-top:0.5rem;font-size:0.875rem;color:var(--text-muted)">Rejoignez la communauté 🚀</p>
+      </div>
+
+      <div id="alertBox"></div>
+
+      <form id="registerForm">
+        <div class="form-group">
+          <label class="form-label" for="username">Nom d'utilisateur</label>
+          <input class="form-input" type="text" id="username" placeholder="h4cker_pro" required minlength="3" maxlength="30" autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="email">Adresse email</label>
+          <input class="form-input" type="email" id="email" placeholder="vous@exemple.com" required autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="password">Mot de passe</label>
+          <input class="form-input" type="password" id="password" placeholder="Min. 8 caractères" required minlength="8" autocomplete="new-password" id="password">
+          <div class="strength-bar mt-1" id="strengthBar">
+            <div class="strength-seg" id="s1"></div>
+            <div class="strength-seg" id="s2"></div>
+            <div class="strength-seg" id="s3"></div>
+            <div class="strength-seg" id="s4"></div>
+          </div>
+          <div class="form-hint" id="strengthLabel"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="confirm">Confirmer le mot de passe</label>
+          <input class="form-input" type="password" id="confirm" placeholder="••••••••" required autocomplete="new-password">
+          <div class="form-error hidden" id="confirmError">Les mots de passe ne correspondent pas.</div>
+        </div>
+        <button type="submit" class="btn btn-primary w-full btn-lg" id="submitBtn">
+          🛡️ Créer mon compte
+        </button>
+      </form>
+
+      <p style="text-align:center;margin-top:1.5rem;font-size:0.875rem;color:var(--text-muted)">
+        Déjà un compte ?
+        <a href="/login.html" style="color:var(--cyan);font-weight:600">Se connecter</a>
+      </p>
+    </div>
+  </div>
+
+  <script>
+    fetch('/api/auth/me').then(r => { if (r.ok) window.location = '/dashboard.html'; }).catch(()=>{});
+
+    // Password strength
+    const pwdInput = document.getElementById('password');
+    pwdInput.addEventListener('input', () => {
+      const val = pwdInput.value;
+      let score = 0;
+      if (val.length >= 8) score++;
+      if (/[A-Z]/.test(val)) score++;
+      if (/[0-9]/.test(val)) score++;
+      if (/[^A-Za-z0-9]/.test(val)) score++;
+
+      const classes  = ['', 'weak', 'fair', 'good', 'strong'];
+      const labels   = ['', '❌ Trop faible', '⚠️ Passable', '✅ Bien', '💪 Fort'];
+      const colors   = ['', 'var(--red)', 'var(--orange)', '#eab308', 'var(--green)'];
+      for (let i = 1; i <= 4; i++) {
+        const seg = document.getElementById('s' + i);
+        seg.className = 'strength-seg' + (i <= score ? ' ' + classes[score] : '');
+      }
+      document.getElementById('strengthLabel').textContent = labels[score];
+      document.getElementById('strengthLabel').style.color = colors[score];
+    });
+
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn     = document.getElementById('submitBtn');
+      const alertEl = document.getElementById('alertBox');
+      const pwd     = document.getElementById('password').value;
+      const conf    = document.getElementById('confirm').value;
+      const errEl   = document.getElementById('confirmError');
+
+      alertEl.innerHTML = '';
+      if (pwd !== conf) { errEl.classList.remove('hidden'); return; }
+      errEl.classList.add('hidden');
+
+      btn.disabled = true;
+      btn.textContent = 'Création...';
+
+      try {
+        const r = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: document.getElementById('username').value.trim(),
+            email:    document.getElementById('email').value.trim(),
+            password: pwd,
+          }),
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Erreur lors de l\'inscription');
+        window.location = '/dashboard.html';
+      } catch (err) {
+        alertEl.innerHTML = `<div class="alert alert-error mb-3">⚠️ ${err.message}</div>`;
+        btn.disabled = false;
+        btn.textContent = '🛡️ Créer mon compte';
+      }
+    });
+  </script>
+</body>
+</html>

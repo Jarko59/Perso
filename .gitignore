@@ -1,0 +1,27 @@
+# ─── Dependencies ────────────────────────────────────────
+node_modules/
+
+# ─── Environment ─────────────────────────────────────────
+.env
+!.env.example
+
+# ─── Database (local dev) ─────────────────────────────────
+database/*.db
+database/*.db-shm
+database/*.db-wal
+
+# ─── Logs ────────────────────────────────────────────────
+*.log
+logs/
+
+# ─── OS ──────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ─── SSL certs (keep folder, ignore certs) ────────────────
+nginx/ssl/*.pem
+nginx/ssl/*.key
+nginx/ssl/*.crt
+
+# ─── Docker ──────────────────────────────────────────────
+*.tar
