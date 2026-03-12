@@ -80,7 +80,7 @@ jobs:
           DB_NAME=${{ secrets.DB_NAME }}
           DB_HOST=db
           DB_PORT=5432
-          GITHUB_REPOSITORY=${{ github.repository }}
+          IMAGE_NAME=${{ env.IMAGE_NAME }}
           EOF
 
           # Login to GHCR
