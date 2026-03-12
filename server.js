@@ -75,7 +75,7 @@ app.get('*', (req, res) => {
 });
 
 // ─── Global error handler ─────────────────────────────────────────────
-app.use((err, _req, res, _next) => {
+app.use((err, _req, res, _next) => { // eslint-disable-line no-unused-vars
   console.error(err.stack);
   const status = err.status || 500;
   res.status(status).json({
