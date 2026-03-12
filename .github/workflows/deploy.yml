@@ -93,6 +93,6 @@ jobs:
           # Health check
           echo "Waiting for app to start..."
           sleep 15
-          curl -sf http://localhost:3000/api/health | grep '"status":"ok"' || exit 1
+          curl -sf http://localhost:18080/api/health | grep '"status":"ok"' || exit 1
           
           echo "✅ Deployment successful on $(date)"
