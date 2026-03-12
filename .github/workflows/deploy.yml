@@ -1,16 +1,16 @@
-name: Deploy to Production
+name: Deploy to Production (Self-Hosted)
 
 on:
   push:
     branches:
-      - main   # Triggers when dev is merged into main
+      - main
 
 env:
-  REGISTRY:   ghcr.io
+  REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  # ─── 1. Build & Push Docker image ─────────────────────────────────
+  # ─── 1. Build & Push Docker image (Cloud) ─────────────────────────
   build:
     name: Build & Push Image
     runs-on: ubuntu-latest
@@ -49,58 +49,49 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
-          cache-to:   type=gha,mode=max
+          cache-to: type=gha,mode=max
 
-  # ─── 2. Deploy to VPS ─────────────────────────────────────────────
+  # ─── 2. Deploy (On-Premise via Runner) ───────────────────────────
   deploy:
-    name: Deploy to VPS
-    runs-on: ubuntu-latest
+    name: Deploy to Local Server
+    runs-on: self-hosted  # <--- CRITICAL: Runs directly on your machine
     needs: build
-    # environment: production # Commented out to simplify secret access during debugging
 
     steps:
-      - name: Checkout (for docker-compose.yml + nginx)
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Copy files to VPS
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host:     ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key:      ${{ secrets.VPS_SSH_KEY }}
-          port:     ${{ secrets.VPS_PORT || 22 }}
-          source:   "docker-compose.yml,nginx/"
-          target:   "~/cyberlearn"
+      - name: Create working directory
+        run: mkdir -p ~/cyberlearn
 
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host:     ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key:      ${{ secrets.VPS_SSH_KEY }}
-          port:     ${{ secrets.VPS_PORT || 22 }}
-          script: |
-            set -e
-            cd ~/cyberlearn
+      - name: Setup environment and deploy
+        run: |
+          cd ~/cyberlearn
+          
+          # Write .env from secrets
+          cat > .env << EOF
+          JWT_SECRET=${{ secrets.JWT_SECRET }}
+          JWT_EXPIRES_IN=7d
+          ADMIN_EMAIL=${{ secrets.ADMIN_EMAIL }}
+          ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}
+          DB_USER=${{ secrets.DB_USER }}
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          DB_NAME=${{ secrets.DB_NAME }}
+          DB_HOST=db
+          DB_PORT=5432
+          GITHUB_REPOSITORY=${{ github.repository }}
+          EOF
 
-            # Write .env from secrets
-            cat > .env << EOF
-            JWT_SECRET=${{ secrets.JWT_SECRET }}
-            JWT_EXPIRES_IN=7d
-            ADMIN_EMAIL=${{ secrets.ADMIN_EMAIL }}
-            ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}
-            GITHUB_REPOSITORY=${{ github.repository }}
-            EOF
+          # Login to GHCR (using repo token or secret if needed)
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-            # Login to GHCR
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          # Pull and Restart
+          docker compose pull app
+          docker compose up -d --remove-orphans
 
-            # Pull latest image & restart
-            docker compose pull app
-            docker compose up -d --remove-orphans
-
-            # Health check
-            sleep 10
-            curl -sf http://localhost:3000/api/health | grep '"status":"ok"' || exit 1
-
-            echo "✅ Deployment successful on $(date)"
+          # Health check
+          echo "Waiting for app to start..."
+          sleep 15
+          curl -sf http://localhost:3000/api/health | grep '"status":"ok"' || exit 1
+          
+          echo "✅ Deployment successful on $(date)"
