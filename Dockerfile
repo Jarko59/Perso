@@ -16,7 +16,8 @@ WORKDIR /app
 # Copy production node_modules
 COPY --from=deps /app/node_modules ./node_modules
 
-# Copy app source
+# Copy app source and manifest
+COPY package.json        ./
 COPY server.js           ./
 COPY database/           ./database/
 COPY middleware/         ./middleware/
