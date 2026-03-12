@@ -100,7 +100,7 @@ const seedDB = async () => {
           ['Quel type d\'XSS est stocké en base de données ?', 'Reflected', 'DOM-based', 'Stored', 'Blind', 'c', 'Stored XSS'],
           ['Que signifie OWASP ?', 'Open Web Application Security Project', 'Online Web Auth System', 'Open Worldwide Application Security', 'None', 'a', 'La référence mondiale en sécu web'],
           ['Une faille IDOR permet de...', 'Miner du bitcoin', 'Accéder aux fichiers d\'un autre utilisateur', 'Crash le serveur', 'Changer le design', 'b', 'Insecure Direct Object Reference'],
-          ['Quel caractère est souvent utilisé pour tester SQLi ?', '"', "'", ';', '--', 'b', "L'apostrophe simple brise souvent la requête"],
+          ['Quel caractère est souvent utilisé pour tester SQLi ?', '"', '\'', ';', '--', 'b', 'L\'apostrophe simple brise souvent la requête'],
         ]
       },
       {
