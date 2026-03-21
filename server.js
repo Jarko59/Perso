@@ -67,7 +67,9 @@ app.use(express.static(path.join(__dirname, 'public'), {
 }));
 
 // ─── API Routes ───────────────────────────────────────────────────────
-app.use('/api/auth',    authLimiter, authRoutes);
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
+app.use('/api/auth',    authRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/quizzes', quizRoutes);
 app.use('/api/users',   userRoutes);
