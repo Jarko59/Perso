@@ -39,7 +39,12 @@ async function spawnInstance(image, prefix) {
     return { id: container.id, port: parseInt(hostPort) };
 
   } catch (error) {
-    console.error(`❌ Erreur Docker Spawn (${image}):`, error.message);
+    console.error(`❌ ERREUR DOCKER SPAWN DETAIL :`, {
+      message: error.message,
+      statusCode: error.statusCode,
+      json: error.json,
+      image: image
+    });
     throw error;
   }
 }
