@@ -25,6 +25,7 @@ COPY --chown=node:node database/ ./database/
 COPY --chown=node:node middleware/ ./middleware/
 COPY --chown=node:node routes/ ./routes/
 COPY --chown=node:node public/ ./public/
+COPY --chown=node:node services/ ./services/
 
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
