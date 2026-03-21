@@ -166,6 +166,59 @@ router.put('/:id', requireAdmin, async (req, res) => {
   }
 });
 
+// Admin: Get all modules for a course (with raw flag data)
+router.get('/:id/modules-admin', requireAdmin, async (req, res) => {
+  try {
+    const r = await query('SELECT * FROM modules WHERE course_id = $1 ORDER BY order_index ASC', [req.params.id]);
+    res.json({ modules: r.rows });
+  } catch (err) {
+    res.status(500).json({ error: 'Erreur modules admin' });
+  }
+});
+
+// Admin: Create a new module
+router.post('/:id/modules', requireAdmin, async (req, res) => {
+  const courseId = req.params.id;
+  const { title, content, order_index, xp_reward, flag_hash, flag_xp, docker_image } = req.body;
+  try {
+    const r = await query(
+      `INSERT INTO modules (course_id, title, content, order_index, xp_reward, flag_hash, flag_xp, docker_image)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+      [courseId, title, content, order_index || 0, xp_reward || 10, flag_hash || null, flag_xp || 50, docker_image || null]
+    );
+    res.status(201).json({ message: 'Module créé', id: r.rows[0].id });
+  } catch (err) {
+    res.status(500).json({ error: 'Erreur création module' });
+  }
+});
+
+// Admin: Update a module
+router.put('/modules/:moduleId', requireAdmin, async (req, res) => {
+  const { moduleId } = req.params;
+  const { title, content, order_index, xp_reward, flag_hash, flag_xp, docker_image } = req.body;
+  try {
+    await query(
+      `UPDATE modules 
+       SET title=$1, content=$2, order_index=$3, xp_reward=$4, flag_hash=$5, flag_xp=$6, docker_image=$7
+       WHERE id=$8`,
+      [title, content, order_index || 0, xp_reward || 10, flag_hash || null, flag_xp || 50, docker_image || null, moduleId]
+    );
+    res.json({ message: 'Module mis à jour' });
+  } catch (err) {
+    res.status(500).json({ error: 'Erreur maj module' });
+  }
+});
+
+// Admin: Delete a module
+router.delete('/modules/:moduleId', requireAdmin, async (req, res) => {
+  try {
+    await query('DELETE FROM modules WHERE id = $1', [req.params.moduleId]);
+    res.json({ message: 'Module supprimé' });
+  } catch (err) {
+    res.status(500).json({ error: 'Erreur suppression module' });
+  }
+});
+
 // Admin: Delete course
 router.delete('/:id', requireAdmin, async (req, res) => {
   try {

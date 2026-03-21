@@ -128,6 +128,70 @@
     </div>
   </div>
 
+  <!-- Modal Modules Manager -->
+  <div class="modal-overlay" id="modulesModal">
+    <div class="modal" style="max-width:800px;width:90%;max-height:90vh;overflow-y:auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
+        <h2 id="mmTitle">Modules du Cours</h2>
+        <button class="btn btn-ghost" onclick="closeModulesModal()">✕</button>
+      </div>
+      
+      <div style="display:flex;gap:1rem;margin-bottom:1rem">
+        <button class="btn btn-primary" onclick="showModuleForm()">+ Nouveau Module</button>
+      </div>
+      
+      <div id="mmList" style="display:flex;flex-direction:column;gap:0.5rem;margin-bottom:2rem;"></div>
+
+      <!-- Éditeur de module -->
+      <div id="mmEditor" style="display:none;background:var(--bg-secondary);padding:1.5rem;border:1px solid var(--border);border-radius:var(--radius-md)">
+        <h3 id="mmFormTitle" style="margin-bottom:1rem">Éditer le Module</h3>
+        <div id="mmAlert"></div>
+        <input type="hidden" id="mmId">
+        <input type="hidden" id="mmCourseId">
+        
+        <div class="form-group">
+          <label class="form-label">Titre du module</label>
+          <input type="text" id="mmTitleInput" class="form-input" required>
+        </div>
+        <div style="display:flex;gap:1rem">
+          <div class="form-group" style="flex:1">
+            <label class="form-label">Ordre</label>
+            <input type="number" id="mmOrder" class="form-input" value="0">
+          </div>
+          <div class="form-group" style="flex:1">
+            <label class="form-label">XP Gagnée</label>
+            <input type="number" id="mmXp" class="form-input" value="10">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Contenu (Markdown)</label>
+          <textarea id="mmContent" class="form-input" rows="6" style="font-family:monospace" required></textarea>
+        </div>
+        
+        <h4 style="margin:1.5rem 0 0.5rem;color:var(--cyan)">⚙️ Challenge Pratique (Optionnel)</h4>
+        <div style="display:flex;gap:1rem">
+          <div class="form-group" style="flex:1">
+            <label class="form-label">Image Docker (ex: web-basic-01)</label>
+            <input type="text" id="mmDocker" class="form-input">
+          </div>
+          <div class="form-group" style="flex:1">
+            <label class="form-label">XP du Flag</label>
+            <input type="number" id="mmFlagXp" class="form-input" value="50">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Hash SHA-256 du Flag</label>
+          <input type="text" id="mmFlagHash" class="form-input" placeholder="Ex: b9fbd81baf1d...">
+        </div>
+        
+        <div style="display:flex;gap:1rem;margin-top:1rem">
+          <button class="btn btn-primary" onclick="saveModule()">Enregistrer</button>
+          <button class="btn btn-secondary" onclick="hideModuleForm()">Annuler</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="toast-container"></div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
@@ -189,6 +253,7 @@
           <td class="font-mono text-cyan">⚡${c.xp_reward}</td>
           <td>${c.published ? '<span class="badge badge-beginner">✅ Oui</span>' : '<span class="badge" style="background:var(--red-dim);color:var(--red)">❌ Non</span>'}</td>
           <td>
+            <button class="btn btn-primary btn-sm" onclick="openModulesManager(${c.id}, '${sanitizeHTML(c.title).replace(/'/g, "\\'")}')">Modules</button>
             <button class="btn btn-secondary btn-sm" onclick="togglePublish(${c.id},${c.published})">
               ${c.published ? 'Dépublier' : 'Publier'}
             </button>
@@ -279,6 +344,138 @@
       t.className = `toast ${type}`; t.textContent = msg;
       tc.appendChild(t);
       setTimeout(() => t.remove(), 3000);
+    }
+
+    // --- MODULES MANAGER ---
+    let mmCourseId = null;
+    let mmModules = [];
+
+    async function openModulesManager(courseId, title) {
+      mmCourseId = courseId;
+      document.getElementById('mmTitle').textContent = `Modules : ${title}`;
+      document.getElementById('modulesModal').classList.add('open');
+      hideModuleForm();
+      await loadCourseModules();
+    }
+
+    function closeModulesModal() {
+      document.getElementById('modulesModal').classList.remove('open');
+      mmCourseId = null;
+    }
+
+    async function loadCourseModules() {
+      const list = document.getElementById('mmList');
+      list.innerHTML = '<div class="loading-state"><div class="spinner"></div></div>';
+      const r = await fetch(`/api/courses/${mmCourseId}/modules-admin`);
+      if (!r.ok) { list.innerHTML = '<div style="color:red">Erreur chargement</div>'; return; }
+      
+      const { modules } = await r.json();
+      mmModules = modules;
+      
+      if (!modules.length) {
+        list.innerHTML = '<div style="color:var(--text-muted);font-size:.9rem;padding:1rem text-align:center">Aucun module configuré pour ce cours.</div>';
+        return;
+      }
+
+      list.innerHTML = modules.map((m, i) => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:1rem;background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius-sm)">
+          <div>
+            <div style="font-weight:600;font-size:1rem;color:var(--text-primary)">${i+1}. ${sanitizeHTML(m.title)}</div>
+            <div style="font-size:.75rem;color:var(--text-muted);margin-top:0.25rem">
+              XP: ${m.xp_reward} | Ordre: ${m.order_index}
+              ${m.docker_image ? `| <span style="color:var(--purple-light)">🐳 ${sanitizeHTML(m.docker_image)}</span>` : ''}
+              ${m.flag_hash ? '| <span style="color:var(--cyan)">🚩 CTF</span>' : ''}
+            </div>
+          </div>
+          <div style="display:flex;gap:0.5rem">
+            <button class="btn btn-secondary btn-sm" onclick="editModule(${i})">Éditer</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteModule(${m.id})">Suppr.</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function showModuleForm() {
+      document.getElementById('mmEditor').style.display = 'block';
+      document.getElementById('mmFormTitle').textContent = 'Nouveau Module';
+      document.getElementById('mmId').value = '';
+      document.getElementById('mmCourseId').value = mmCourseId;
+      document.getElementById('mmTitleInput').value = '';
+      document.getElementById('mmOrder').value = mmModules.length;
+      document.getElementById('mmXp').value = '10';
+      document.getElementById('mmContent').value = '';
+      document.getElementById('mmDocker').value = '';
+      document.getElementById('mmFlagXp').value = '50';
+      document.getElementById('mmFlagHash').value = '';
+      document.getElementById('mmAlert').innerHTML = '';
+      document.getElementById('mmEditor').scrollIntoView({behavior:'smooth'});
+    }
+
+    function editModule(idx) {
+      const m = mmModules[idx];
+      document.getElementById('mmEditor').style.display = 'block';
+      document.getElementById('mmFormTitle').textContent = 'Éditer le Module';
+      document.getElementById('mmId').value = m.id;
+      document.getElementById('mmCourseId').value = m.course_id;
+      document.getElementById('mmTitleInput').value = m.title;
+      document.getElementById('mmOrder').value = m.order_index;
+      document.getElementById('mmXp').value = m.xp_reward;
+      document.getElementById('mmContent').value = m.content;
+      document.getElementById('mmDocker').value = m.docker_image || '';
+      document.getElementById('mmFlagXp').value = m.flag_xp || 50;
+      document.getElementById('mmFlagHash').value = m.flag_hash || '';
+      document.getElementById('mmAlert').innerHTML = '';
+      document.getElementById('mmEditor').scrollIntoView({behavior:'smooth'});
+    }
+
+    function hideModuleForm() {
+      document.getElementById('mmEditor').style.display = 'none';
+    }
+
+    async function saveModule() {
+      const id = document.getElementById('mmId').value;
+      const payload = {
+        title: document.getElementById('mmTitleInput').value,
+        order_index: parseInt(document.getElementById('mmOrder').value) || 0,
+        xp_reward: parseInt(document.getElementById('mmXp').value) || 10,
+        content: document.getElementById('mmContent').value,
+        docker_image: document.getElementById('mmDocker').value || null,
+        flag_xp: parseInt(document.getElementById('mmFlagXp').value) || 50,
+        flag_hash: document.getElementById('mmFlagHash').value || null
+      };
+
+      if (!payload.title || !payload.content) {
+        document.getElementById('mmAlert').innerHTML = '<div class="alert alert-error" style="margin-bottom:1rem">Titre et contenu obligatoires.</div>';
+        return;
+      }
+
+      const url = id ? '/api/courses/modules/' + id : '/api/courses/' + mmCourseId + '/modules';
+      const method = id ? 'PUT' : 'POST';
+
+      const r = await fetch(url, {
+        method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload)
+      });
+
+      if (r.ok) {
+        showToast(id ? 'Module mis à jour' : 'Module créé', 'success');
+        hideModuleForm();
+        loadCourseModules();
+        loadCourses(); // Refresh numbers silently
+      } else {
+        const d = await r.json();
+        document.getElementById('mmAlert').innerHTML = '<div class="alert alert-error" style="margin-bottom:1rem">' + (d.error || 'Erreur API') + '</div>';
+      }
+    }
+
+    async function deleteModule(id) {
+      if (!confirm("Voulez-vous vraiment supprimer ce module ? Cette action effacera toute sa progression.")) return;
+      const r = await fetch('/api/courses/modules/' + id, { method:'DELETE' });
+      if (r.ok) {
+        showToast('Module supprimé', 'success');
+        hideModuleForm();
+        loadCourseModules();
+        loadCourses();
+      }
     }
 
     async function logout() {
