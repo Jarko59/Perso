@@ -63,7 +63,13 @@ app.use(cors({
 
 // ─── Static files ─────────────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, 'public'), {
-  maxAge: process.env.NODE_ENV === 'production' ? '1d' : 0,
+  setHeaders: (res, pathStr) => {
+    if (pathStr.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache');
+    } else {
+      res.setHeader('Cache-Control', process.env.NODE_ENV === 'production' ? 'public, max-age=86400' : 'public, max-age=0');
+    }
+  }
 }));
 
 // ─── API Routes ───────────────────────────────────────────────────────
