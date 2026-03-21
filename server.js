@@ -15,6 +15,7 @@ const authRoutes    = require('./routes/auth');
 const courseRoutes  = require('./routes/courses');
 const quizRoutes    = require('./routes/quizzes');
 const userRoutes    = require('./routes/users');
+const { getLastError } = require('./services/docker');
 
 const app  = express();
 app.set('trust proxy', 1);
@@ -96,7 +97,8 @@ app.get('/api/health/docker', async (req, res) => {
       status: 'ok',
       docker_version: info.ServerVersion,
       images_count: images.length,
-      images_list: images.map(img => img.RepoTags).flat().filter(Boolean)
+      images_list: images.map(img => img.RepoTags).flat().filter(Boolean),
+      last_error: getLastError()
     });
   } catch (err) {
     res.status(500).json({ status: 'error', message: err.message });

@@ -27,7 +27,7 @@ async function spawnInstance(image, prefix) {
     // Récupérer le port assigné dynamiquement
     const info = await container.inspect();
     const ports = info.NetworkSettings.Ports;
-    
+
     // On prend le premier port exposé
     const firstPortKey = Object.keys(ports || {})[0];
     if (!firstPortKey || !ports[firstPortKey]) {
