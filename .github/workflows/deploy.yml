@@ -90,6 +90,10 @@ jobs:
           docker compose pull app
           docker compose up -d --remove-orphans --force-recreate
 
+          # Build CTF Images on the VPS
+          chmod +x scripts/build_ctfs.sh
+          ./scripts/build_ctfs.sh
+
           # Health check
           echo "Waiting for app to start..."
           sleep 15
