@@ -15,9 +15,10 @@ router.post('/register', async (req, res) => {
 
   try {
     const hashedPassword = await bcrypt.hash(password, 12);
+    const role = (email === process.env.ADMIN_EMAIL) ? 'admin' : 'user';
     const result = await query(
-      'INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING id',
-      [username, email, hashedPassword]
+      'INSERT INTO users (username, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id',
+      [username, email, hashedPassword, role]
     );
 
     const user = result.rows[0];

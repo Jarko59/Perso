@@ -30,6 +30,7 @@
       <a href="/dashboard.html">Dashboard</a>
       <a href="/courses.html" class="active">Cours</a>
       <a href="/profile.html">Profil</a>
+      <a href="/admin.html" id="navAdmin" class="hidden">Admin</a>
     </div>
     <div class="navbar-actions">
       <a href="/profile.html" class="navbar-user">
@@ -96,6 +97,7 @@
       const { user } = await r.json();
       document.getElementById('navUsername').textContent = user.username;
       document.getElementById('navAvatar').textContent   = user.username[0].toUpperCase();
+      if (user.role === 'admin') document.getElementById('navAdmin').classList.remove('hidden');
 
       const params = new URLSearchParams(window.location.search);
       courseId = params.get('id');

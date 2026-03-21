@@ -114,6 +114,7 @@
       <a href="/courses.html">Cours</a>
       <a href="#features">Fonctionnalités</a>
       <a href="/dashboard.html" id="navDashboard" class="hidden">Dashboard</a>
+      <a href="/admin.html" id="navAdmin" class="hidden">Admin</a>
     </div>
     <div class="navbar-actions">
       <div id="navGuest">
@@ -298,6 +299,7 @@
           document.getElementById('navGuest').classList.add('hidden');
           document.getElementById('navUser').classList.remove('hidden');
           document.getElementById('navDashboard').classList.remove('hidden');
+          if (user.role === 'admin') document.getElementById('navAdmin').classList.remove('hidden');
           document.getElementById('navUsername').textContent = user.username;
           document.getElementById('navAvatar').textContent = user.username[0].toUpperCase();
         }
