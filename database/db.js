@@ -83,6 +83,8 @@ const initDB = async () => {
         content TEXT NOT NULL,
         order_index INTEGER DEFAULT 0,
         xp_reward INTEGER DEFAULT 10,
+        flag_hash VARCHAR(64),
+        flag_xp INTEGER DEFAULT 50,
         created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
       )
     `);
@@ -95,6 +97,17 @@ const initDB = async () => {
         course_id INTEGER REFERENCES courses(id) ON DELETE CASCADE,
         module_id INTEGER REFERENCES modules(id) ON DELETE CASCADE,
         completed_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, module_id)
+      )
+    `);
+
+    // 5.b User Flags table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS user_flags (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        module_id INTEGER REFERENCES modules(id) ON DELETE CASCADE,
+        solved_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(user_id, module_id)
       )
     `);

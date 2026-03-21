@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const crypto = require('crypto');
 const { query } = require('../database/db');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 
@@ -36,8 +37,10 @@ router.get('/:id', requireAuth, async (req, res) => {
     if (courseRes.rowCount === 0) return res.status(404).json({ error: 'Cours non trouvé' });
 
     const modulesRes = await query(`
-      SELECT m.*, 
-      EXISTS(SELECT 1 FROM user_progress up WHERE up.user_id = $1 AND up.module_id = m.id) as completed
+      SELECT m.id, m.course_id, m.title, m.content, m.order_index, m.xp_reward, 
+      (m.flag_hash IS NOT NULL) as has_flag, m.flag_xp,
+      EXISTS(SELECT 1 FROM user_progress up WHERE up.user_id = $1 AND up.module_id = m.id) as completed,
+      EXISTS(SELECT 1 FROM user_flags uf WHERE uf.user_id = $1 AND uf.module_id = m.id) as flag_solved
       FROM modules m
       WHERE m.course_id = $2
       ORDER BY m.order_index ASC
@@ -70,6 +73,41 @@ router.post('/:id/progress', requireAuth, async (req, res) => {
     res.json({ message: 'Module complété', xp_earned: xp });
   } catch (err) {
     res.status(500).json({ error: 'Erreur lors de la mise à jour de la progression' });
+  }
+});
+
+// Submit a Flag (CTF)
+router.post('/:courseId/modules/:moduleId/flag', requireAuth, async (req, res) => {
+  const { flag } = req.body;
+  const moduleId = req.params.moduleId;
+
+  if (!flag) return res.status(400).json({ error: 'Flag manquant' });
+
+  try {
+    // Determine if flag is correct
+    const modRes = await query('SELECT flag_hash, flag_xp FROM modules WHERE id = $1', [moduleId]);
+    if (modRes.rowCount === 0) return res.status(404).json({ error: 'Module non trouvé' });
+    
+    const { flag_hash, flag_xp } = modRes.rows[0];
+    if (!flag_hash) return res.status(400).json({ error: 'Ce module ne contient pas de challenge CTF' });
+
+    // Hash submitted flag and compare
+    const submittedHash = crypto.createHash('sha256').update(flag.trim()).digest('hex');
+    if (submittedHash !== flag_hash) {
+      return res.status(400).json({ error: 'Flag incorrect ! Réessayez.' });
+    }
+
+    // Check if already solved
+    const checkRes = await query('SELECT 1 FROM user_flags WHERE user_id = $1 AND module_id = $2', [req.user.id, moduleId]);
+    if (checkRes.rowCount > 0) return res.json({ message: 'Flag déjà validé', xp_earned: 0 });
+
+    // Record solution & reward XP
+    await query('INSERT INTO user_flags (user_id, module_id) VALUES ($1, $2)', [req.user.id, moduleId]);
+    await query('UPDATE users SET xp = xp + $1 WHERE id = $2', [flag_xp, req.user.id]);
+
+    res.json({ message: 'Flag validé ! Félicitations !', xp_earned: flag_xp });
+  } catch (err) {
+    res.status(500).json({ error: 'Erreur lors de la validation du flag' });
   }
 });
 
