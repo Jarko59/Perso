@@ -121,7 +121,9 @@
     </div>
   </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
   <script>
+    const sanitizeHTML = (str) => window.DOMPurify ? DOMPurify.sanitize(str) : str;
     let currentUser = null;
 
     async function init() {
@@ -168,10 +170,10 @@
         <div style="display:flex;align-items:center;gap:1rem;padding:0.75rem 0;border-bottom:1px solid var(--border)">
           <span style="font-size:1.5rem">${a.icon}</span>
           <div style="flex:1">
-            <div style="font-weight:600;font-size:0.875rem">${a.title}</div>
+            <div style="font-weight:600;font-size:0.875rem">${sanitizeHTML(a.title)}</div>
             <div style="font-size:0.75rem;color:var(--text-muted)">${new Date(a.last_at).toLocaleDateString('fr-FR')}</div>
           </div>
-          <a href="/course.html?id=${a.slug}" class="btn btn-ghost btn-sm">Reprendre →</a>
+          <a href="/course.html?id=${encodeURIComponent(a.slug)}" class="btn btn-ghost btn-sm">Reprendre →</a>
         </div>
       `).join('').replace(/border-bottom:[^;]+;(?=[^"]*<\/div>\s*$)/,'');
     }
@@ -187,9 +189,9 @@
           <div class="rank" style="${i<3?'font-size:1.25rem':'color:var(--text-muted)'}">
             ${i < 3 ? rankEmojis[i] : (i+1)}
           </div>
-          <div class="avatar" style="width:28px;height:28px;font-size:0.7rem">${u.username[0].toUpperCase()}</div>
+          <div class="avatar" style="width:28px;height:28px;font-size:0.7rem">${sanitizeHTML(u.username[0].toUpperCase())}</div>
           <div style="flex:1">
-            <div style="font-weight:600;font-size:0.875rem">${u.username}${currentUser?.id===u.id?' <span style="color:var(--cyan)">(vous)</span>':''}</div>
+            <div style="font-weight:600;font-size:0.875rem">${sanitizeHTML(u.username)}${currentUser?.id===u.id?' <span style="color:var(--cyan)">(vous)</span>':''}</div>
             <div style="font-size:0.75rem;color:var(--text-muted)">${u.quizzes_passed} quiz réussis</div>
           </div>
           <div class="font-mono text-cyan" style="font-weight:700;font-size:0.9rem">${u.xp} XP</div>
@@ -214,8 +216,8 @@
             <span class="badge badge-${c.difficulty==='beginner'?'beginner':c.difficulty==='advanced'?'advanced':'intermediate'}">${c.difficulty}</span>
           </div>
           <div class="course-card-body">
-            <div class="course-title">${c.title}</div>
-            <div class="course-desc">${c.description}</div>
+            <div class="course-title">${sanitizeHTML(c.title)}</div>
+            <div class="course-desc">${sanitizeHTML(c.description)}</div>
             <div class="course-meta">
               <span class="badge badge-cyan">⏱ ${c.duration_min} min</span>
               <span class="badge badge-purple">⚡ ${c.xp_reward} XP</span>

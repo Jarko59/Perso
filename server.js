@@ -22,7 +22,14 @@ const PORT = process.env.PORT || 3000;
 
 // ─── Security middleware ──────────────────────────────────────────────
 app.use(helmet({
-  contentSecurityPolicy: false, // handled by nginx in prod
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ['\'self\''],
+      scriptSrc: ['\'self\'', '\'unsafe-inline\'', 'https://cdnjs.cloudflare.com'],
+      styleSrc: ['\'self\'', '\'unsafe-inline\''],
+      imgSrc: ['\'self\'', 'data:', 'https:']
+    }
+  }
 }));
 
 // ─── Rate limiting ────────────────────────────────────────────────────
@@ -35,8 +42,10 @@ const limiter = rateLimit({
 });
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 60,
-  message: { error: 'Too many auth attempts.' },
+  max: 5,
+  message: { error: 'Too many auth attempts. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 app.use(limiter);
 
@@ -46,7 +55,7 @@ app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || true,
+  origin: process.env.NODE_ENV === 'production' ? process.env.CORS_ORIGIN : 'http://localhost:3000',
   credentials: true,
 }));
 

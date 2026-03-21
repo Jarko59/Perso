@@ -48,7 +48,9 @@
     </div>
   </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
   <script>
+    const sanitizeHTML = (str) => window.DOMPurify ? DOMPurify.sanitize(str) : str;
     let questions = [], currentQ = 0, answers = {}, courseData = null, courseId = null;
 
     async function init() {
@@ -89,7 +91,7 @@
       box.innerHTML = `
         <div style="margin-bottom:1.5rem">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem">
-            <div style="font-size:0.8rem;color:var(--text-muted)">${courseData.title}</div>
+            <div style="font-size:0.8rem;color:var(--text-muted)">${sanitizeHTML(courseData.title)}</div>
           </div>
           <div style="background:rgba(255,255,255,0.06);border-radius:999px;height:6px;overflow:hidden;margin-bottom:1rem">
             <div style="height:100%;border-radius:999px;background:linear-gradient(90deg,var(--cyan),var(--purple));width:${(currentQ+1)/questions.length*100}%;transition:width .4s ease"></div>
@@ -101,12 +103,12 @@
 
         <div class="quiz-question">
           <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.5rem">Question ${currentQ+1} / ${questions.length}</div>
-          <p style="font-size:1.05rem;font-weight:600;color:var(--text-primary);margin:0">${q.question}</p>
+          <p style="font-size:1.05rem;font-weight:600;color:var(--text-primary);margin:0">${sanitizeHTML(q.question)}</p>
           <div class="quiz-options">
             ${opts.map(o => `
               <div class="quiz-option ${answers[q.id]===o.key?'selected':''}" id="opt-${o.key}" onclick="selectAnswer('${o.key}')">
                 <div class="option-key">${o.key.toUpperCase()}</div>
-                <span>${o.label}</span>
+                <span>${sanitizeHTML(o.label)}</span>
               </div>
             `).join('')}
           </div>
@@ -202,12 +204,12 @@
               <div class="review-item ${d.isCorrect ? 'ok' : 'bad'}">
                 <div style="display:flex;align-items:flex-start;gap:0.75rem;margin-bottom:0.5rem">
                   <span style="font-size:1.25rem">${d.isCorrect ? '✅' : '❌'}</span>
-                  <div style="font-weight:600;font-size:0.9rem">${i+1}. ${d.question}</div>
+                  <div style="font-weight:600;font-size:0.9rem">${i+1}. ${sanitizeHTML(d.question)}</div>
                 </div>
                 <div style="font-size:0.825rem;color:var(--text-muted);margin-left:2rem">
-                  Ta réponse : <strong style="color:${d.isCorrect?'var(--green)':'var(--red)'}">${d.userAnswer ? opts[d.userAnswer] : '(pas de réponse)'}</strong>
-                  ${!d.isCorrect ? `<br>Bonne réponse : <strong style="color:var(--green)">${opts[d.correct]}</strong>` : ''}
-                  ${d.explanation ? `<br><em style="color:var(--text-secondary);margin-top:0.25rem;display:block">💡 ${d.explanation}</em>` : ''}
+                  Ta réponse : <strong style="color:${d.isCorrect?'var(--green)':'var(--red)'}">${d.userAnswer ? sanitizeHTML(opts[d.userAnswer]) : '(pas de réponse)'}</strong>
+                  ${!d.isCorrect ? `<br>Bonne réponse : <strong style="color:var(--green)">${sanitizeHTML(opts[d.correct])}</strong>` : ''}
+                  ${d.explanation ? `<br><em style="color:var(--text-secondary);margin-top:0.25rem;display:block">💡 ${sanitizeHTML(d.explanation)}</em>` : ''}
                 </div>
               </div>`;
             }).join('')}
