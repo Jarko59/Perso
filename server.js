@@ -86,6 +86,23 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', uptime: process.uptime(), env: process.env.NODE_ENV });
 });
 
+app.get('/api/health/docker', async (req, res) => {
+  const Docker = require('dockerode');
+  const docker = new Docker({ socketPath: '/var/run/docker.sock' });
+  try {
+    const info = await docker.info();
+    const images = await docker.listImages();
+    res.json({
+      status: 'ok',
+      docker_version: info.ServerVersion,
+      images_count: images.length,
+      images_list: images.map(img => img.RepoTags).flat().filter(Boolean)
+    });
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: err.message });
+  }
+});
+
 // ─── SPA fallback (serve index.html for all non-api routes) ───────────
 app.get('*', (req, res) => {
   if (!req.path.startsWith('/api')) {
