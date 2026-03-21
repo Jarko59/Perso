@@ -44,7 +44,7 @@
     <div class="container">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem">
         <div>
-          <h1 style="font-size:1.75rem;margin-bottom:0.25rem">Bonjour, <span class="glow-cyan" id="heroName">...</span> 👋</h1>
+          <h1 style="font-size:1.75rem;margin-bottom:0.25rem">Bonjour, <span class="glow-cyan" id="heroName">...</span> 👋 <span id="debugRole" style="font-size:0.7rem;opacity:0.5;font-family:monospace"></span></h1>
           <p style="color:var(--text-muted)">Continuez votre apprentissage</p>
         </div>
         <div class="xp-info">
@@ -135,6 +135,7 @@
       document.getElementById('navUsername').textContent = user.username;
       document.getElementById('navAvatar').textContent   = user.username[0].toUpperCase();
       document.getElementById('heroName').textContent    = user.username;
+      document.getElementById('debugRole').textContent   = `[Role: ${user.role}]`;
       if (user.role === 'admin') document.getElementById('navAdmin').classList.remove('hidden');
 
       // XP & level
