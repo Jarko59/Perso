@@ -164,6 +164,31 @@
               ${idx < modules.length-1 ? `<button class="btn btn-secondary btn-sm" onclick="loadModule(${idx+1})">Suivant →</button>` : ''}
             </div>
           </div>
+          
+          ${mod.docker_image ? `
+            <div class="sandbox-box" style="margin-bottom:2rem;padding:1.5rem;background:rgba(124,58,237,0.1);border:1px solid var(--purple-light);border-radius:var(--radius-md)">
+              <h3 style="margin-bottom:0.5rem;display:flex;align-items:center;gap:0.5rem">💻 Machine Cible Isolé</h3>
+              <p style="font-size:0.9rem;margin-bottom:1rem;color:var(--text-secondary)">Ce module nécessite la compromission d'une cible. Démarrez votre environnement Sandbox privé.</p>
+              ${mod.active_instance ? `
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;background:rgba(0,0,0,0.5);padding:1rem;border-radius:var(--radius-sm)">
+                  <div>
+                    <div style="font-size:0.8rem;color:var(--green);font-weight:600;margin-bottom:0.25rem">🟢 Machine En Ligne</div>
+                    <code style="font-size:1rem;user-select:all" id="instanceUrl">http://EXOTIC-IP:${mod.active_instance.port}</code>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:1rem">
+                    <div style="text-align:right">
+                      <div style="font-size:0.75rem;color:var(--text-muted)">Temps restant</div>
+                      <div style="font-family:var(--font-mono);font-weight:600;color:var(--orange)" id="activeTimer">--:--</div>
+                    </div>
+                    <button class="btn btn-danger btn-sm" onclick="stopMachine(${mod.id})">Arrêter</button>
+                  </div>
+                </div>
+              ` : `
+                <button class="btn btn-secondary" id="spawnBtn" onclick="spawnMachine(${mod.id})">🚀 Démarrer l'instance Docker</button>
+              `}
+            </div>
+          ` : ''}
+
           <div class="card md" id="mdContent" style="line-height:1.9">
             ${renderMarkdown(mod.content)}
           </div>
@@ -245,6 +270,61 @@
         btn.disabled = false;
         btn.textContent = 'Valider';
       }
+    }
+
+    async function spawnMachine(moduleId) {
+      const btn = document.getElementById('spawnBtn');
+      if (btn) { btn.disabled = true; btn.textContent = 'Démarrage... (Patientez)'; }
+      try {
+        const r = await fetch(`/api/courses/${courseId}/modules/${moduleId}/spawn`, { method: 'POST' });
+        const data = await r.json();
+        if (!r.ok) {
+          showToast(data.error || 'Erreur', 'error');
+          if (btn) { btn.disabled = false; btn.textContent = '🚀 Démarrer l\\\'instance Docker'; }
+          return;
+        }
+        showToast('Machine démarrée !', 'success');
+        init();
+      } catch (e) {
+        showToast('Erreur API', 'error');
+        if (btn) { btn.disabled = false; btn.textContent = '🚀 Démarrer l\\\'instance Docker'; }
+      }
+    }
+
+    async function stopMachine(moduleId) {
+      try {
+        const r = await fetch(`/api/courses/${courseId}/modules/${moduleId}/stop`, { method: 'POST' });
+        if (r.ok) {
+          showToast('Machine détruite avec succès.', 'info');
+          init();
+        }
+      } catch (e) {}
+    }
+
+    let timerInterval;
+    function updateTimers() {
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        const mod = modules[currentModuleIdx];
+        if (mod && mod.active_instance) {
+          const el = document.getElementById('activeTimer');
+          if (!el) return;
+          const rem = Math.max(0, new Date(mod.active_instance.expires_at) - new Date());
+          if (rem <= 0) {
+            el.textContent = "Expirée";
+            el.style.color = "var(--red)";
+            return;
+          }
+          const m = Math.floor(rem / 60000);
+          const s = Math.floor((rem % 60000) / 1000);
+          el.textContent = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+          
+          const urlEl = document.getElementById('instanceUrl');
+          if (urlEl && urlEl.textContent.includes('EXOTIC-IP')) {
+            urlEl.textContent = `http://${window.location.hostname}:${mod.active_instance.port}`;
+          }
+        }
+      }, 1000);
     }
 
     async function toggleBookmark() {

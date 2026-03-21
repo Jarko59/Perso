@@ -85,6 +85,7 @@ const initDB = async () => {
         xp_reward INTEGER DEFAULT 10,
         flag_hash VARCHAR(64),
         flag_xp INTEGER DEFAULT 50,
+        docker_image VARCHAR(100),
         created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
       )
     `);
@@ -108,6 +109,20 @@ const initDB = async () => {
         user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
         module_id INTEGER REFERENCES modules(id) ON DELETE CASCADE,
         solved_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, module_id)
+      )
+    `);
+
+    // 5.c Active Docker Instances table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS active_instances (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        module_id INTEGER REFERENCES modules(id) ON DELETE CASCADE,
+        container_id VARCHAR(64) NOT NULL,
+        port INTEGER NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        expires_at TIMESTAMPTZ NOT NULL,
         UNIQUE(user_id, module_id)
       )
     `);
