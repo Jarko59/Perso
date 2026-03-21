@@ -121,7 +121,13 @@
       document.getElementById('headerDuration').textContent = '⏱ ' + course.duration_min + ' min';
       document.getElementById('headerXP').textContent   = '⚡ ' + course.xp_reward + ' XP';
       document.getElementById('headerDiff').textContent  = course.difficulty;
-      document.getElementById('quizBtn').href = `/quiz.html?id=${courseId}`;
+      const quizBtn = document.getElementById('quizBtn');
+      if (course.has_quiz) {
+        quizBtn.href = `/quiz.html?id=${courseId}`;
+        quizBtn.style.display = 'inline-flex';
+      } else {
+        quizBtn.style.display = 'none';
+      }
 
       const done  = modules.filter(m => m.completed).length;
       const pct   = modules.length ? Math.round(done / modules.length * 100) : 0;

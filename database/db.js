@@ -74,6 +74,16 @@ const initDB = async () => {
       )
     `);
 
+    // Auto-migration pour les anciens cours
+    try {
+      await client.query('ALTER TABLE courses ADD COLUMN category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL');
+      await client.query('ALTER TABLE courses ADD COLUMN slug VARCHAR(100)');
+      await client.query('ALTER TABLE courses ADD COLUMN xp_reward INTEGER DEFAULT 100');
+      await client.query('ALTER TABLE courses ADD COLUMN published BOOLEAN DEFAULT FALSE');
+    } catch (e) {
+      // Ignore si elles existent déjà
+    }
+
     // 4. Modules (Lessons) table
     await client.query(`
       CREATE TABLE IF NOT EXISTS modules (

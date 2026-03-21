@@ -29,9 +29,10 @@ router.get('/', requireAuth, async (req, res) => {
 router.get('/:id', requireAuth, async (req, res) => {
   try {
     const courseRes = await query(`
-      SELECT c.*, cat.name as category_name, cat.icon as category_icon
+      SELECT c.*, cat.name as category_name, cat.icon as category_icon,
+      EXISTS(SELECT 1 FROM quiz_questions qq WHERE qq.course_id = c.id) as has_quiz
       FROM courses c
-      JOIN categories cat ON c.category_id = cat.id
+      LEFT JOIN categories cat ON c.category_id = cat.id
       WHERE c.id = $1
     `, [req.params.id]);
 

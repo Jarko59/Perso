@@ -27,7 +27,7 @@ router.get('/profile', requireAuth, async (req, res) => {
 
     // Recent activity
     const activityRes = await query(`
-      SELECT 'progress' as type, c.title, c.slug, c.icon, up.completed_at as last_at
+      SELECT 'progress' as type, c.title, c.id as course_id, c.icon, up.completed_at as last_at
       FROM user_progress up
       JOIN courses c ON up.course_id = c.id
       WHERE up.user_id = $1

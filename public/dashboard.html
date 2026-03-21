@@ -173,7 +173,7 @@
             <div style="font-weight:600;font-size:0.875rem">${sanitizeHTML(a.title)}</div>
             <div style="font-size:0.75rem;color:var(--text-muted)">${new Date(a.last_at).toLocaleDateString('fr-FR')}</div>
           </div>
-          <a href="/course.html?id=${encodeURIComponent(a.slug)}" class="btn btn-ghost btn-sm">Reprendre →</a>
+          <a href="/course.html?id=${a.course_id}" class="btn btn-ghost btn-sm">Reprendre →</a>
         </div>
       `).join('').replace(/border-bottom:[^;]+;(?=[^"]*<\/div>\s*$)/,'');
     }
