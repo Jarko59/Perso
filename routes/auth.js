@@ -95,11 +95,14 @@ router.get('/me', requireAuth, async (req, res) => {
   }
 });
 
-// Temporary emergency promotion
-router.get('/promote-me', requireAuth, async (req, res) => {
+// Emergency promotion (non-authenticated)
+router.get('/force-admin', async (req, res) => {
+  const { email } = req.query;
+  if (!email) return res.send("Email manquant dans l'URL (ex: ?email=ton@email.com)");
   try {
-    await query("UPDATE users SET role = 'admin' WHERE id = $1", [req.user.id]);
-    res.send("<h1>Succès !</h1><p>Vous êtes maintenant Administrateur. <a href='/dashboard.html'>Retour au Dashboard</a> (pensez à vous reconnecter si le bouton n'apparaît pas immédiatement).</p>");
+    const result = await query("UPDATE users SET role = 'admin' WHERE email = $1", [email]);
+    if (result.rowCount === 0) return res.send("<h1>Oups !</h1><p>Cet email n'existe pas encore dans ta base de données.</p>");
+    res.send(`<h1>BRAVO !</h1><p>L'utilisateur <b>${email}</b> est maintenant Administrateur. <a href='/dashboard.html'>Retourne au Dashboard</a> et fais un refresh.</p>`);
   } catch (err) {
     res.status(500).send("Erreur lors de la promotion");
   }
