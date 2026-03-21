@@ -90,6 +90,15 @@ const initDB = async () => {
       )
     `);
 
+    // Auto-migration pour les instances existantes
+    try {
+      await client.query('ALTER TABLE modules ADD COLUMN flag_hash VARCHAR(64)');
+      await client.query('ALTER TABLE modules ADD COLUMN flag_xp INTEGER DEFAULT 50');
+      await client.query('ALTER TABLE modules ADD COLUMN docker_image VARCHAR(100)');
+    } catch (e) {
+      // Ignore si elles existent déjà
+    }
+
     // 5. User Progress table
     await client.query(`
       CREATE TABLE IF NOT EXISTS user_progress (
