@@ -79,7 +79,9 @@ const initDB = async () => {
       await client.query('ALTER TABLE courses ADD COLUMN category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL');
       await client.query('ALTER TABLE courses ADD COLUMN slug VARCHAR(100)');
       await client.query('ALTER TABLE courses ADD COLUMN xp_reward INTEGER DEFAULT 100');
-      await client.query('ALTER TABLE courses ADD COLUMN published BOOLEAN DEFAULT FALSE');
+      await client.query('ALTER TABLE courses ADD COLUMN published BOOLEAN DEFAULT TRUE');
+      // Force les anciens cours à  être publiés pour ne pas les cacher
+      await client.query('UPDATE courses SET published = TRUE');
     } catch (e) {
       // Ignore si elles existent déjà
     }

@@ -14,7 +14,7 @@ router.get('/', requireAuth, async (req, res) => {
       (SELECT COUNT(*) FROM user_progress up WHERE up.user_id = $1 AND up.course_id = c.id) as completed_modules,
       EXISTS(SELECT 1 FROM bookmarks b WHERE b.user_id = $1 AND b.course_id = c.id) as bookmarked
       FROM courses c
-      JOIN categories cat ON c.category_id = cat.id
+      LEFT JOIN categories cat ON c.category_id = cat.id
       WHERE c.published = TRUE
       ORDER BY c.created_at DESC
     `, [req.user.id]);
