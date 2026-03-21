@@ -328,8 +328,9 @@
           el.textContent = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
           
           const urlEl = document.getElementById('instanceUrl');
-          if (urlEl && urlEl.textContent.includes('EXOTIC-IP')) {
-            urlEl.textContent = `http://${window.location.hostname}:${mod.active_instance.port}`;
+          if (urlEl) {
+            const displayHost = window.location.hostname;
+            urlEl.textContent = `http://${displayHost}:${mod.active_instance.port}`;
           }
         }
       }, 1000);
