@@ -13,19 +13,18 @@ RUN npm ci --omit=dev
 FROM base AS runtime
 WORKDIR /app
 
+# Run as non-root before copying code
+USER node
+
 # Copy production node_modules
-COPY --from=deps /app/node_modules ./node_modules
+COPY --chown=node:node --from=deps /app/node_modules ./node_modules
 
 # Copy app source and manifest
-COPY package.json        ./
-COPY server.js           ./
-COPY database/           ./database/
-COPY middleware/         ./middleware/
-COPY routes/             ./routes/
-COPY public/             ./public/
-
-# Run as non-root
-USER node
+COPY --chown=node:node package.json server.js ./
+COPY --chown=node:node database/ ./database/
+COPY --chown=node:node middleware/ ./middleware/
+COPY --chown=node:node routes/ ./routes/
+COPY --chown=node:node public/ ./public/
 
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \

@@ -84,7 +84,10 @@
 
   <div id="toastContainer" id="toast-container"></div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
   <script>
+    const sanitizeHTML = (str) => window.DOMPurify ? DOMPurify.sanitize(str) : str;
+
     let course = null, modules = [], currentModuleIdx = 0, courseId = null;
 
     async function init() {
@@ -133,7 +136,7 @@
           <div class="module-check ${m.completed ? 'done' : ''}">
             ${m.completed ? '✓' : (i + 1)}
           </div>
-          <span style="flex:1;font-size:0.8rem">${m.title}</span>
+          <span style="flex:1;font-size:0.8rem">${sanitizeHTML(m.title)}</span>
           ${m.xp_reward ? `<span style="font-size:0.7rem;color:var(--text-muted)">+${m.xp_reward}xp</span>` : ''}
         </div>
       `).join('');
@@ -153,7 +156,7 @@
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem">
             <div>
               <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:0.25rem">Module ${idx+1} / ${modules.length}</div>
-              <h2 style="font-size:1.4rem">${mod.title}</h2>
+              <h2 style="font-size:1.4rem">${sanitizeHTML(mod.title)}</h2>
             </div>
             <div style="display:flex;gap:0.75rem;align-items:center">
               ${idx > 0 ? `<button class="btn btn-secondary btn-sm" onclick="loadModule(${idx-1})">← Précédent</button>` : ''}
@@ -202,7 +205,7 @@
     }
 
     function renderMarkdown(text) {
-      return text
+      const rawHtml = text
         .replace(/^## (.+)$/gm, '<h2>$1</h2>')
         .replace(/^### (.+)$/gm, '<h3>$1</h3>')
         .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
@@ -215,6 +218,7 @@
         .replace(/(<tr>.*<\/tr>)/gs, '<table>$1</table>')
         .replace(/\n{2,}/g, '</p><p>')
         .replace(/^(?!<[a-z])(.+)$/gm, (m, p) => p ? `<p>${p}</p>` : '');
+      return sanitizeHTML(rawHtml);
     }
 
     function showToast(msg, type='info') {
