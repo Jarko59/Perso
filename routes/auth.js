@@ -51,6 +51,12 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Identifiants invalides' });
     }
 
+    // Auto-promote to admin if email matches environment variable
+    if (user.email === process.env.ADMIN_EMAIL && user.role !== 'admin') {
+      await query("UPDATE users SET role = 'admin' WHERE id = $1", [user.id]);
+      user.role = 'admin';
+    }
+
     const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN });
 
     res.cookie('token', token, {
