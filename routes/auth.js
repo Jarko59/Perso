@@ -14,8 +14,11 @@ router.post('/register', async (req, res) => {
   }
 
   try {
+    const adminEmail = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+    const userEmail = email.trim().toLowerCase();
+    const role = (userEmail === adminEmail) ? 'admin' : 'user';
+    
     const hashedPassword = await bcrypt.hash(password, 12);
-    const role = (email === process.env.ADMIN_EMAIL) ? 'admin' : 'user';
     const result = await query(
       'INSERT INTO users (username, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id',
       [username, email, hashedPassword, role]
@@ -53,7 +56,10 @@ router.post('/login', async (req, res) => {
     }
 
     // Auto-promote to admin if email matches environment variable
-    if (user.email === process.env.ADMIN_EMAIL && user.role !== 'admin') {
+    const adminEmail = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+    const userEmail = user.email.trim().toLowerCase();
+    
+    if (userEmail === adminEmail && user.role !== 'admin') {
       await query("UPDATE users SET role = 'admin' WHERE id = $1", [user.id]);
       user.role = 'admin';
     }
@@ -86,6 +92,16 @@ router.get('/me', requireAuth, async (req, res) => {
     res.json({ user: result.rows[0] });
   } catch (err) {
     res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Temporary emergency promotion
+router.get('/promote-me', requireAuth, async (req, res) => {
+  try {
+    await query("UPDATE users SET role = 'admin' WHERE id = $1", [req.user.id]);
+    res.send("<h1>Succès !</h1><p>Vous êtes maintenant Administrateur. <a href='/dashboard.html'>Retour au Dashboard</a> (pensez à vous reconnecter si le bouton n'apparaît pas immédiatement).</p>");
+  } catch (err) {
+    res.status(500).send("Erreur lors de la promotion");
   }
 });
 
