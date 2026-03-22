@@ -16,6 +16,7 @@ const courseRoutes  = require('./routes/courses');
 const quizRoutes    = require('./routes/quizzes');
 const userRoutes    = require('./routes/users');
 const { getLastError } = require('./services/docker');
+const { requireAdmin } = require('./middleware/auth');
 
 const app  = express();
 app.set('trust proxy', 1);
@@ -87,7 +88,7 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', uptime: process.uptime(), env: process.env.NODE_ENV });
 });
 
-app.get('/api/health/docker', async (req, res) => {
+app.get('/api/health/docker', requireAdmin, async (req, res) => {
   const Docker = require('dockerode');
   const docker = new Docker({ socketPath: '/var/run/docker.sock' });
   try {

@@ -81,6 +81,7 @@ jobs:
           DB_HOST=db
           DB_PORT=5432
           IMAGE_NAME=${{ env.IMAGE_NAME }}
+          CORS_ORIGIN=https://interionic-unsmirkingly-brandi.ngrok-free.dev
           EOF
 
           # Login to GHCR
