@@ -181,7 +181,7 @@
                 <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;background:rgba(0,0,0,0.5);padding:1rem;border-radius:var(--radius-sm)">
                   <div>
                     <div style="font-size:0.8rem;color:var(--green);font-weight:600;margin-bottom:0.25rem">🟢 Machine En Ligne</div>
-                    <code style="font-size:1rem;user-select:all;color:var(--cyan)" id="instanceUrl">${mod.docker_image.includes('ssh') ? `ssh student@${window.location.hostname} -p ${mod.active_instance.port}` : `http://${window.location.hostname}:${mod.active_instance.port}`}</code>
+                    <code style="font-size:1rem;user-select:all;color:var(--cyan)" id="instanceUrl">${mod.docker_image.includes('ssh') ? `ssh student@100.98.233.103 -p ${mod.active_instance.port}` : `http://100.98.233.103:${mod.active_instance.port}`}</code>
                   </div>
                   <div style="display:flex;align-items:center;gap:1rem">
                     <div style="text-align:right">
@@ -328,8 +328,8 @@
           el.textContent = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
           
           const urlEl = document.getElementById('instanceUrl');
-          if (urlEl) {
-            const displayHost = window.location.hostname;
+          if (urlEl && !urlEl.textContent.includes('ssh')) {
+            const displayHost = '100.98.233.103';
             urlEl.textContent = `http://${displayHost}:${mod.active_instance.port}`;
           }
         }
